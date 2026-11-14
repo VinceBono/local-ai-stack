@@ -7,7 +7,8 @@ services:
   vllm:
     image: vllm/vllm-openai:v0.32.0
     restart: unless-stopped
-    ipc: host
+    # vLLM needs a large shared-memory area; a private one avoids sharing the host IPC namespace.
+    shm_size: "8gb"
     command: ["--model", "${VLLM_MODEL:-HuggingFaceTB/SmolLM2-1.7B-Instruct}"]
     environment:
       HF_TOKEN: ${HF_TOKEN:-}
