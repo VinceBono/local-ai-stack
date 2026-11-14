@@ -1,0 +1,31 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Vince Bono
+# Optional vLLM server next to Ollama, for serving one model to many users at once.
+# Needs an NVIDIA GPU. Use with:
+#   docker compose -f compose.yaml -f compose.gpu.yaml -f compose.vllm.yaml up -d
+services:
+  vllm:
+    image: vllm/vllm-openai:v0.32.0
+    restart: unless-stopped
+    ipc: host
+    command: ["--model", "${VLLM_MODEL:-HuggingFaceTB/SmolLM2-1.7B-Instruct}"]
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+    volumes:
+      - huggingface:/root/.cache/huggingface
+    # No published port: only Open WebUI can reach it.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  open-webui:
+    environment:
+      OPENAI_API_BASE_URL: http://vllm:8000/v1
+      OPENAI_API_KEY: unused-vllm-is-internal-only
+
+volumes:
+  huggingface:
