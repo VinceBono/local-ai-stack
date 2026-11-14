@@ -44,6 +44,29 @@ To add another model later: `docker compose exec ollama ollama pull <tag>`, or u
 
 A rough sizing rule: a model needs about its download size in memory, plus 1–2 GB. If it doesn't fit in GPU memory, Ollama runs part of it on the CPU and it gets much slower.
 
+## Using an NVIDIA GPU
+
+Install the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) on the Docker host (Docker Desktop on Windows with WSL 2 already includes GPU support), then add the GPU file:
+
+```bash
+docker compose -f compose.yaml -f compose.gpu.yaml up -d
+docker compose exec ollama nvidia-smi     # should list your card
+```
+
+To make that the default, set `COMPOSE_FILE` in `.env` as shown in `.env.example`.
+
+Running this in a Proxmox VM? [`docs/proxmox-gpu-passthrough.md`](docs/proxmox-gpu-passthrough.md) covers handing the card to the VM.
+
+## vLLM (optional)
+
+Ollama is the easy choice for one person trying many models. [vLLM](https://docs.vllm.ai) is built for the opposite case: one model answering many people at once. `compose.vllm.yaml` adds it next to Ollama and connects it to the same chat page:
+
+```bash
+docker compose -f compose.yaml -f compose.gpu.yaml -f compose.vllm.yaml up -d
+```
+
+It needs an NVIDIA GPU and loads the model in `VLLM_MODEL` (a Hugging Face name) at full precision, so it uses much more GPU memory than Ollama does for a model of the same size. Like Ollama, it has no published port.
+
 ## Reaching it from other devices
 
 Keep the default binding and put something that encrypts traffic in front of it:
@@ -68,7 +91,7 @@ Chats and accounts live in the `open-webui` volume, models in the `ollama` volum
 
 ## Limits
 
-- Tested in CI on Linux with a CPU only.
+- Tested in CI on Linux with a CPU only. The GPU and vLLM files are checked for valid syntax but have not been run on a GPU, and the Proxmox guide is written from the upstream documentation, not from a test.
 - Single machine, a handful of users. No high availability, no backups, no single sign-on.
 - Open WebUI and Ollama are separate projects with their own licenses and release notes. Read theirs before upgrading the pinned versions.
 
