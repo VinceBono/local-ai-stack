@@ -8,7 +8,7 @@ MODEL="${MODEL:-llama3.2:3b}"
 URL="http://127.0.0.1:${WEBUI_PORT:-3000}"
 export MODEL
 
-fail() { echo "FAIL: $*" >&2; docker compose ps -a >&2; docker compose logs --tail 40 >&2; exit 1; }
+fail() { docker compose ps -a; docker compose logs --tail 15 open-webui; echo "FAIL: $*"; exit 1; }
 
 wait_for() { # wait_for <seconds> <description> <command...>
   local limit=$1 what=$2; shift 2
@@ -25,9 +25,10 @@ answer=$(docker compose exec -T ollama ollama run "$MODEL" "Reply with one short
 [ -n "$answer" ] || fail "model returned nothing"
 echo "model answered: $answer"
 
-docker compose port ollama 11434 >/dev/null 2>&1 && fail "Ollama port is published to the host"
+curl -s --max-time 5 http://127.0.0.1:11434/api/version >/dev/null && fail "Ollama answers on the host's port 11434"
 
 code=$(curl -s -o /dev/null -w '%{http_code}' "$URL/api/v1/chats/")
+echo "API without a login: HTTP $code"
 [ "$code" = 401 ] || [ "$code" = 403 ] || fail "API answered $code without a login (expected 401 or 403)"
 
 echo "OK: stack is up, model answers, Ollama is not exposed, API needs a login"
